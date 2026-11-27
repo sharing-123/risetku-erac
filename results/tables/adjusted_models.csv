@@ -1,0 +1,4 @@
+model,n,RR,low,high,P,status
+shiver ~ treated,299,0.192,0.105,0.351,8.45e-08,UNVERIFIED
+shiver ~ treated + age + bmi,298,0.194,0.106,0.355,9.85e-08,UNVERIFIED
+shiver ~ treated + age + bmi + previous_cs + sbp1 + hr1,298,0.193,0.105,0.353,1.01e-07,UNVERIFIED

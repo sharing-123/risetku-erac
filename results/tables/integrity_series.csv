@@ -1,0 +1,4 @@
+variable,patients,with an identical 20-point series,with an identical T2 to T20 series,largest identical group,series present in both arms,sharing 10+ values at the same time points
+"Systolic BP, mmHg",300,186,267,13,35,281
+"Diastolic BP, mmHg",300,99,101,49,4,222
+"Heart rate, beats/min",300,120,122,54,8,234

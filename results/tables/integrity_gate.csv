@@ -1,0 +1,6 @@
+type,check,passed
+integrity,Repeated vital-sign series within the AR(1) null range,False
+integrity,No complete haemodynamic record is repeated,False
+integrity,No recurrent identical impossible value,False
+plausibility,All five Wrench grades observed,False
+plausibility,No eligibility flag from free-text diagnosis,False

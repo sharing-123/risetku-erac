@@ -1,0 +1,12 @@
+rule,variable,n
+decimal comma converted,height,1
+decimal comma converted,weight,24
+implausible value set to missing,height,1
+missing in source,dbp2,1
+missing in source,dbp6,1
+missing in source,hr5,1
+missing in source,wrench,1
+team-reported entry error corrected to 113,sbp11,4
+team-reported entry error corrected to 113,sbp5,1
+team-reported entry error corrected to 114,sbp11,3
+team-reported entry error corrected to 114,sbp13,13

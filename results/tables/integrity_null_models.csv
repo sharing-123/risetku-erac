@@ -1,0 +1,10 @@
+variable,model,complete records,observed duplicated,observed run,duplicated mean,duplicated max,run mean,run max,Monte Carlo P (duplicated)
+sbp,AR(1) with patient effect,279,182,261,0.0,0,0.0,0,0.002
+sbp,5-point block resampling of these data,279,182,261,4.7,14,261.3,276,0.002
+sbp,10-point block resampling of these data,279,182,261,105.0,138,278.0,279,0.002
+dbp,AR(1) with patient effect,298,99,220,0.0,0,0.0,0,0.002
+dbp,5-point block resampling of these data,298,99,220,0.3,4,143.1,172,0.002
+dbp,10-point block resampling of these data,298,99,220,41.2,63,286.3,295,0.002
+hr,AR(1) with patient effect,299,120,234,0.0,0,0.0,0,0.002
+hr,5-point block resampling of these data,299,120,234,0.7,6,164.3,189,0.002
+hr,10-point block resampling of these data,299,120,234,55.8,81,289.4,297,0.002
