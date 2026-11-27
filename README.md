@@ -25,7 +25,7 @@ Background and objectives. Shivering is common during cesarean delivery under ne
 
 Methods. In this single-center, open-label, parallel-group trial, women scheduled for elective cesarean delivery under spinal anesthesia were randomized 1:1 to paracetamol 1 g before spinal anesthesia plus the institutional pathway, or to the pathway alone. The shivering assessor knew the allocation. The primary outcome was a highest recorded Wrench grade of 1 or more. Integrity screening of the dataset was added at revision. Registration was retrospective.
 
-Results. Of 300 women, 299 had a shivering score. Shivering was recorded in 11 of 150 (7.3%) with paracetamol and 57 of 149 (38.3%) in controls (risk ratio 0.19, 95% CI 0.10 to 0.35). Grades 1 and 4 never appeared. Of 300 women, 252 shared an identical series of systolic pressure, diastolic pressure or heart rate with another woman, far beyond autoregressive simulation. Hemodynamic outcomes were therefore not analyzed.
+Results. Of 300 women, 299 had a shivering score. Shivering was recorded in 11 of 150 (7.3%) with paracetamol and 57 of 149 (38.3%) in controls (risk ratio 0.19, 95% CI 0.10 to 0.35). No woman had grade 1 or 4 as the highest recorded grade. Of 300 women, 252 shared an identical series of systolic pressure, diastolic pressure or heart rate with another woman, far beyond autoregressive simulation. Hemodynamic outcome results are therefore not reported.
 
 Conclusions. Shivering was recorded less often with paracetamol. Unblinded assessment and unexplained repetition in the hemodynamic records mean that this difference does not establish efficacy or safety. Independent source verification and a blinded, prospectively registered trial are needed.
 
@@ -83,7 +83,7 @@ The assessor knew the allocation.
 
 ## Limitations
 
-Outcome assessment was unblinded and no placebo was used. Registration was retrospective. Some women did not meet eligibility criteria. The hemodynamic records failed integrity screening and no independent source verification has been performed. Participant level and hemodynamic outputs are withheld from this repository.
+Outcome assessment was unblinded and no placebo was used. Registration was retrospective. Some women did not meet eligibility criteria. The hemodynamic records failed integrity screening and no independent source verification has been performed. Participant level outputs and hemodynamic outcome results are withheld, while aggregate baseline values and integrity counts are retained.
 
 ## Software and reproducibility
 
