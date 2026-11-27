@@ -1,12 +1,14 @@
+import random
 import struct
 from pathlib import Path
-import matplotlib
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
 
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
 ASSETS.mkdir(exist_ok=True)
-STYLE = {"C": (0.68, (92, 108, 128)), "N": (0.66, (52, 110, 235)), "O": (0.64, (232, 76, 61)), "H": (0.40, (232, 236, 242))}
+STYLE = {"C": (0.68, "#5b6b86"), "N": (0.66, "#3b76ee"), "O": (0.64, "#ee5546"), "H": (0.42, "#dfe7f2")}
+FRAMES, PERIOD = 120, 14
+WIDTH, HEIGHT, CENTRE = 1280, 400, (962, 196)
+FONT = "font-family=\"'Segoe UI', Helvetica, Arial, sans-serif\""
 
 
 def polar(origin, length, degrees, z=0.0):
@@ -38,7 +40,7 @@ def paracetamol():
         attach(ring, "H", polar(atoms[ring][1], 1.08, angle))
     elements = [a[0] for a in atoms]
     xyz = np.array([a[1] for a in atoms])
-    return elements, xyz - xyz.mean(0), bonds
+    return elements, xyz - (xyz.max(0) + xyz.min(0)) / 2, bonds
 
 
 def icosphere(level=3):
@@ -84,19 +86,6 @@ def write_stl(path, elements, xyz, bonds):
             handle.write(struct.pack("<12fH", *normal, *t.ravel(), 0))
 
 
-def shaded_sphere(radius, colour):
-    y, x = np.mgrid[-radius:radius + 1, -radius:radius + 1] / radius
-    r2 = x ** 2 + y ** 2
-    z = np.sqrt(np.clip(1 - r2, 0, 1))
-    light = np.array([-0.5, -0.6, 0.62])
-    light /= np.linalg.norm(light)
-    diffuse = np.clip(x * light[0] + y * light[1] + z * light[2], 0, 1)
-    specular = diffuse ** 28
-    rgb = np.array(colour)[None, None, :] * (0.22 + 0.82 * diffuse[..., None]) + 235 * specular[..., None]
-    alpha = np.clip((1 - np.sqrt(r2)) * radius, 0, 1) * 255
-    return Image.fromarray(np.dstack([np.clip(rgb, 0, 255), alpha]).astype(np.uint8), "RGBA")
-
-
 def rotation(ax, ay, az):
     a, b, c = np.radians([ax, ay, az])
     rx = np.array([[1, 0, 0], [0, np.cos(a), -np.sin(a)], [0, np.sin(a), np.cos(a)]])
@@ -105,50 +94,109 @@ def rotation(ax, ay, az):
     return rz @ ry @ rx
 
 
-def banner(path, elements, xyz, bonds, width=1920, height=640, scale=2):
-    w, h = width * scale, height * scale
-    gx, gy = np.meshgrid(np.linspace(0, 1, w), np.linspace(0, 1, h))
-    glow = np.exp(-(((gx - 0.74) * 2.4) ** 2 + ((gy - 0.5) * 1.7) ** 2))
-    base = np.array([9, 14, 28]) + gx[..., None] * np.array([4, 14, 22]) + glow[..., None] * np.array([14, 58, 82])
-    image = Image.fromarray(base.astype(np.uint8)).convert("RGBA")
-    draw = ImageDraw.Draw(image)
-    for k in range(-12, 25):
-        draw.line([(k * 90 * scale, h), (w * 0.5 + (k - 6) * 22 * scale, h * 0.78)], fill=(40, 78, 104, 90), width=scale)
-    for k, y in enumerate([0.79, 0.82, 0.86, 0.91, 0.97]):
-        draw.line([(0, h * y), (w, h * y)], fill=(40, 78, 104, 50 + 14 * k), width=scale)
-    points = xyz @ rotation(24, -20, -12).T
-    depth = 18.0
-    projected = [((w * 0.725) + p[0] * 104 * scale * depth / (depth - p[2]), (h * 0.47) - p[1] * 104 * scale * depth / (depth - p[2]), p[2]) for p in points]
-    layers = [("atom", projected[i][2], i) for i in range(len(elements))]
-    layers += [("bond", (projected[i][2] + projected[j][2]) / 2 - 0.05, (i, j)) for i, j in bonds]
-    for kind, _, ref in sorted(layers, key=lambda item: item[1]):
-        if kind == "bond":
-            i, j = ref
-            a, b = np.array(projected[i][:2]), np.array(projected[j][:2])
-            direction = (b - a) / np.linalg.norm(b - a)
-            ends = [tuple(a + direction * STYLE[elements[i]][0] * 54 * scale), tuple(b - direction * STYLE[elements[j]][0] * 54 * scale)]
-            for thickness, shade in [(22, (58, 74, 98)), (14, (116, 138, 166)), (5, (196, 212, 232))]:
-                draw.line(ends, fill=shade + (255,), width=thickness * scale)
+def project(xyz, turn, scale=47.0, depth=17.0):
+    points = xyz @ (rotation(20, 0, -9) @ rotation(0, turn, 0)).T
+    factor = depth / (depth - points[:, 2])
+    return np.column_stack([CENTRE[0] + points[:, 0] * scale * factor, CENTRE[1] - points[:, 1] * scale * factor, points[:, 2], factor])
+
+
+def frame(elements, bonds, points):
+    items = [(points[i, 2], "atom", i) for i in range(len(elements))]
+    items += [((points[i, 2] + points[j, 2]) / 2 - 0.02, "bond", (i, j)) for i, j in bonds]
+    out = []
+    for _, kind, ref in sorted(items, key=lambda item: item[0]):
+        if kind == "atom":
+            x, y, _, f = points[ref]
+            out.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{STYLE[elements[ref]][0] * 27 * f:.1f}" fill="url(#{elements[ref]})"/>')
         else:
-            x, y, z = projected[ref]
-            size, colour = STYLE[elements[ref]]
-            radius = int(size * 68 * scale * depth / (depth - z))
-            image.alpha_composite(shaded_sphere(radius, colour), (int(x) - radius, int(y) - radius))
-    fonts = Path(matplotlib.get_data_path()) / "fonts" / "ttf"
-    face = lambda name, size: ImageFont.truetype(str(fonts / name), size * scale)
-    left = 96 * scale
-    draw.rectangle([left, 150 * scale, left + 90 * scale, 157 * scale], fill=(72, 202, 228))
-    draw.text((left, 184 * scale), "Paracetamol and", font=face("DejaVuSans-Bold.ttf", 70), fill=(244, 248, 252))
-    draw.text((left, 272 * scale), "Perioperative Shivering", font=face("DejaVuSans-Bold.ttf", 70), fill=(244, 248, 252))
-    draw.text((left, 386 * scale), "Cesarean delivery under spinal anesthesia", font=face("DejaVuSans.ttf", 32), fill=(166, 190, 214))
-    draw.text((left, 436 * scale), "Reproducible analysis and data integrity audit", font=face("DejaVuSans.ttf", 32), fill=(166, 190, 214))
-    draw.text((left, 510 * scale), "PRELIMINARY AND UNVERIFIED", font=face("DejaVuSans-Bold.ttf", 24), fill=(255, 190, 92))
-    draw.text((left, 84 * scale), "R I S E T K U", font=face("DejaVuSans-Bold.ttf", 30), fill=(72, 202, 228))
-    image.convert("RGB").resize((width, height), Image.LANCZOS).save(path, optimize=True)
+            i, j = ref
+            a, b = points[i, :2], points[j, :2]
+            length = np.linalg.norm(b - a)
+            if length < 1:
+                continue
+            direction = (b - a) / length
+            start = a + direction * min(STYLE[elements[i]][0] * 20, length / 2)
+            end = b - direction * min(STYLE[elements[j]][0] * 20, length / 2)
+            line = f'x1="{start[0]:.1f}" y1="{start[1]:.1f}" x2="{end[0]:.1f}" y2="{end[1]:.1f}"'
+            out.append(f'<line {line} stroke="#45587a" stroke-width="8"/><line {line} stroke="#b9cdea" stroke-width="2.6"/>')
+    return "".join(out)
+
+
+def molecule_layers(elements, xyz, bonds):
+    layers = []
+    for k in range(FRAMES):
+        start, stop = k / FRAMES, (k + 1) / FRAMES
+        if k == 0:
+            values, times, initial = "visible;hidden", f"0;{stop:.5f}", "visible"
+        elif k == FRAMES - 1:
+            values, times, initial = "hidden;visible", f"0;{start:.5f}", "hidden"
+        else:
+            values, times, initial = "hidden;visible;hidden", f"0;{start:.5f};{stop:.5f}", "hidden"
+        animate = f'<animate attributeName="visibility" values="{values}" keyTimes="{times}" calcMode="discrete" dur="{PERIOD}s" repeatCount="indefinite"/>'
+        layers.append(f'<g visibility="{initial}">{animate}{frame(elements, bonds, project(xyz, 360 * k / FRAMES - 18))}</g>')
+    return "".join(layers)
+
+
+def sphere_gradient(name, colour):
+    return (f'<radialGradient id="{name}" cx=".34" cy=".3" r=".75"><stop offset="0" stop-color="#ffffff"/>'
+            f'<stop offset=".28" stop-color="{colour}"/><stop offset="1" stop-color="#080d1c"/></radialGradient>')
+
+
+def pulse_path(y, step=160):
+    shape = [(0, 0), (34, 0), (42, -7), (50, 0), (62, 0), (68, 9), (76, -34), (84, 14), (92, 0), (112, 0), (124, -10), (138, 0), (160, 0)]
+    points = [(x + k * step, y + dy) for k in range(-1, WIDTH // step + 2) for x, dy in shape]
+    return "M" + " L".join(f"{x} {v}" for x, v in points)
+
+
+def banner(path, elements, xyz, bonds):
+    rng = random.Random(20261127)
+    stars = "".join(
+        f'<circle cx="{rng.randint(10, WIDTH - 10)}" cy="{rng.randint(10, HEIGHT - 10)}" r="{rng.choice([0.9, 1.3, 1.9])}" fill="#7dd3fc">'
+        f'<animate attributeName="opacity" values=".1;.9;.1" dur="{rng.uniform(2.4, 5.2):.1f}s" begin="{rng.uniform(0, 3):.1f}s" repeatCount="indefinite"/></circle>'
+        for _ in range(46))
+    grid = "".join(f'<path d="M0 {y} H{WIDTH}"/>' for y in range(40, HEIGHT, 40))
+    orbits = "".join(
+        f'<g transform="rotate({tilt} {CENTRE[0]} {CENTRE[1]})"><ellipse cx="{CENTRE[0]}" cy="{CENTRE[1]}" rx="{rx}" ry="{ry}" fill="none" stroke="{colour}" stroke-opacity=".45" stroke-width="1.1" stroke-dasharray="2 9">'
+        f'<animate attributeName="stroke-dashoffset" values="0;{shift}" dur="3s" repeatCount="indefinite"/></ellipse>'
+        f'<circle r="4" fill="{colour}"><animateMotion dur="{period}s" repeatCount="indefinite" path="M{CENTRE[0] - rx} {CENTRE[1]} a{rx} {ry} 0 1 0 {2 * rx} 0 a{rx} {ry} 0 1 0 {-2 * rx} 0"/></circle></g>'
+        for tilt, rx, ry, colour, period, shift in [(-14, 262, 92, "#22d3ee", 9, 110), (24, 236, 66, "#a78bfa", 12, -110)])
+    chips, x = [], 90
+    for label, width in [("Open label trial", 138), ("Reproducible notebook", 188), ("Data integrity audit", 170)]:
+        chips.append(f'<rect x="{x}" y="298" width="{width}" height="32" rx="16" fill="#0b1b30" fill-opacity=".7" stroke="#22d3ee" stroke-opacity=".55"/>'
+                     f'<text x="{x + width / 2}" y="319" text-anchor="middle" font-size="14" fill="#e0f2fe" {FONT}>{label}</text>')
+        x += width + 14
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {WIDTH} {HEIGHT}" width="{WIDTH}" height="{HEIGHT}" role="img" aria-labelledby="t d">
+<title id="t">Risetku paracetamol and shivering study</title><desc id="d">Animated three dimensional paracetamol molecule rotating beside the study title.</desc>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#060a14"/><stop offset=".55" stop-color="#0b1330"/><stop offset="1" stop-color="#130c2e"/></linearGradient>
+<radialGradient id="halo" cx=".75" cy=".5" r=".42"><stop offset="0" stop-color="#22d3ee" stop-opacity=".3"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/></radialGradient>
+<radialGradient id="halo2" cx=".15" cy=".15" r=".55"><stop offset="0" stop-color="#7c3aed" stop-opacity=".26"/><stop offset="1" stop-color="#7c3aed" stop-opacity="0"/></radialGradient>
+<linearGradient id="beam" x1="0" x2="1"><stop offset="0" stop-color="#22d3ee" stop-opacity="0"/><stop offset=".5" stop-color="#a5f3fc" stop-opacity=".95"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/></linearGradient>
+<linearGradient id="title" x1="0" x2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#a5f3fc"/><stop offset="1" stop-color="#c4b5fd"/>
+<animate attributeName="x1" values="-.6;.6;-.6" dur="7s" repeatCount="indefinite"/><animate attributeName="x2" values=".4;1.6;.4" dur="7s" repeatCount="indefinite"/></linearGradient>
+{"".join(sphere_gradient(k, v[1]) for k, v in STYLE.items())}
+<filter id="soft" x="-50%" y="-200%" width="200%" height="500%"><feGaussianBlur stdDeviation="9"/></filter>
+</defs>
+<rect width="{WIDTH}" height="{HEIGHT}" fill="url(#bg)"/><rect width="{WIDTH}" height="{HEIGHT}" fill="url(#halo)"/><rect width="{WIDTH}" height="{HEIGHT}" fill="url(#halo2)"/>
+<g opacity=".13" stroke="#67e8f9" stroke-width=".6">{grid}<animateTransform attributeName="transform" type="translate" values="0 0;0 40" dur="6s" repeatCount="indefinite"/></g>
+{stars}
+<path d="{pulse_path(366)}" fill="none" stroke="#22d3ee" stroke-opacity=".5" stroke-width="1.6"><animateTransform attributeName="transform" type="translate" values="0 0;-160 0" dur="2.6s" repeatCount="indefinite"/></path>
+<ellipse cx="{CENTRE[0]}" cy="338" rx="196" ry="16" fill="#22d3ee" opacity=".28" filter="url(#soft)"><animate attributeName="rx" values="196;160;196" dur="5s" repeatCount="indefinite"/></ellipse>
+{orbits}
+<g><animateTransform attributeName="transform" type="translate" values="0 -7;0 7;0 -7" dur="5s" repeatCount="indefinite"/>{molecule_layers(elements, xyz, bonds)}</g>
+<rect y="0" x="720" width="480" height="2" fill="url(#beam)" opacity=".7"><animate attributeName="y" values="56;336;56" dur="6.5s" repeatCount="indefinite"/></rect>
+<text x="92" y="84" font-size="15" letter-spacing="7" fill="#67e8f9" {FONT}>RISETKU CLINICAL RESEARCH</text>
+<text x="88" y="154" font-size="60" font-weight="800" letter-spacing="-1" fill="url(#title)" {FONT}>Paracetamol and</text>
+<text x="88" y="218" font-size="60" font-weight="800" letter-spacing="-1" fill="url(#title)" {FONT}>Shivering</text>
+<text x="92" y="254" font-size="19" fill="#dbeafe" {FONT}>Cesarean delivery under spinal anesthesia</text>
+<text x="92" y="279" font-size="19" fill="#dbeafe" {FONT}>A reproducible analysis with data integrity screening</text>
+{"".join(chips)}
+</svg>'''
+    Path(path).write_text(svg, encoding="utf-8")
 
 
 if __name__ == "__main__":
     molecule = paracetamol()
     write_stl(ASSETS / "paracetamol.stl", *molecule)
-    banner(ASSETS / "banner.png", *molecule)
-    print("atoms", len(molecule[0]), "bonds", len(molecule[2]))
+    banner(ASSETS / "banner.svg", *molecule)
+    print("atoms", len(molecule[0]), "bonds", len(molecule[2]), "banner kB", (ASSETS / "banner.svg").stat().st_size // 1024)
