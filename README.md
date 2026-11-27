@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/design-open%20label%20RCT-0b1b30?style=flat-square" alt="Open label randomized trial">
   <img src="https://img.shields.io/badge/participants-300-0b1b30?style=flat-square" alt="300 participants">
   <img src="https://img.shields.io/badge/python-3.12-0b1b30?style=flat-square" alt="Python 3.12">
-  <a href="https://colab.research.google.com/github/sharing-123/risetku-paracetamol-shivering/blob/main/notebooks/Risetku_ParacetamolAnalysis.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab"></a>
+  <a href="https://colab.research.google.com/github/sharing-123/risetku-erac/blob/main/erac.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab"></a>
 </p>
 
 # Paracetamol and Shivering
@@ -102,7 +102,7 @@ python src/build_assets.py
 
 | Path | Content |
 |---|---|
-| `notebooks/` | Executed notebook |
+| `erac.ipynb` | Executed notebook |
 | `src/` | Notebook source, notebook builder and asset builder |
 | `results/tables/` | Aggregate tables |
 | `results/figures/` | Figures |

@@ -11,7 +11,7 @@ notebook = nbformat.v4.new_notebook()
 notebook.cells = [nbformat.v4.new_code_cell(cell) for cell in cells]
 notebook.metadata["kernelspec"] = {"name": "python3", "display_name": "Python 3", "language": "python"}
 notebook.metadata["colab"] = {"provenance": []}
-target = here.parent / "notebooks" / "Risetku_ParacetamolAnalysis.ipynb"
+target = here.parent / "erac.ipynb"
 if "--run" in sys.argv:
     NotebookClient(notebook, timeout=1800, kernel_name="python3", resources={"metadata": {"path": str(here)}}).execute()
 nbformat.write(notebook, target)
